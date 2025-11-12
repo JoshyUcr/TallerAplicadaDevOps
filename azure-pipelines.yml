@@ -4,38 +4,46 @@ trigger:
 pool:
   name: MyAgentPool
 
-steps: 
-
-- task: DotNetCoreCLI@2
-  displayName: "compilacion"
+steps:
+# 1 Instalar SDK .NET 8
+- task: UseDotNet@2
+  displayName: "Instalar .NET SDK 8.0"
   inputs:
-    azureSubscription: 'Azure subscription 1(db2f2e2a-0772-46b5-8a3d-9777e10e0a81)'
+    packageType: 'sdk'
+    version: '8.0.x'
+    includePreviewVersions: false
+
+# 2 Compilar
+- task: DotNetCoreCLI@2
+  displayName: "Compilación"
+  inputs:
     command: 'build'
     projects: '**/*.csproj'
-    workingDirectory: '/demo-taller'
+    workingDirectory: '$(System.DefaultWorkingDirectory)/demo-taller'
 
+# 3 Publicar
 - task: DotNetCoreCLI@2
-  displayName: "publicacion"
+  displayName: "Publicación"
   inputs:
-    azureSubscription: 'Azure subscription 1(db2f2e2a-0772-46b5-8a3d-9777e10e0a81)'
     command: 'publish'
     publishWebProjects: true
     workingDirectory: '$(System.DefaultWorkingDirectory)/demo-taller'
+    arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)'
 
+# 4 Ejecutar pruebas
 - task: DotNetCoreCLI@2
-  displayName: "pruebas"
+  displayName: "Pruebas"
   inputs:
-    azureSubscription: 'Azure subscription 1(db2f2e2a-0772-46b5-8a3d-9777e10e0a81)'
     command: 'test'
     projects: '**/*Tests.csproj'
     publishTestResults: true
 
+# 5 Desplegar en Azure Web App
 - task: AzureRmWebAppDeployment@5
-  displayName: "despliegue"
+  displayName: "Despliegue en Azure Web App"
   inputs:
     ConnectionType: 'AzureRM'
     azureSubscription: 'Azure subscription 1(db2f2e2a-0772-46b5-8a3d-9777e10e0a81)'
     appType: 'webApp'
     WebAppName: 'AplicadaTallerJDMK'
-    packageForLinux: '$(System.DefaultWorkingDirectory)/**/*.zip'
-
+    packageForLinux: '$(Build.ArtifactStagingDirectory)/**/*.zip'
